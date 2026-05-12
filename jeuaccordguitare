@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jeu accords guitare acoustique</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #fff4d6, #f7e7c3);
+      color: #2b2118;
+    }
+
+    .game {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      background: white;
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 32px;
+    }
+
+    .subtitle {
+      color: #6b5b4a;
+      margin-top: 8px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: #fff3cd;
+      border-radius: 16px;
+      padding: 12px 18px;
+      font-weight: bold;
+    }
+
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      margin-bottom: 24px;
+    }
+
+    .guitar-zone {
+      height: 160px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #2c1b10, #8a4f22);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      margin: 20px 0;
+    }
+
+    button {
+      border: none;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.03);
+    }
+
+    .primary {
+      background: #b46b22;
+      color: white;
+    }
+
+    .secondary {
+      background: #f1e1c6;
+      color: #2b2118;
+    }
+
+    .answers {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .answer {
+      background: #fffaf0;
+      border: 2px solid #f0d6a8;
+      text-align: left;
+      padding: 18px;
+      min-height: 78px;
+    }
+
+    .answer.correct {
+      background: #dff7df;
+      border-color: #3cae3c;
+    }
+
+    .answer.wrong {
+      background: #ffe0e0;
+      border-color: #cc4444;
+    }
+
+    .label {
+      font-size: 26px;
+      display: block;
+    }
+
+    .name {
+      color: #6b5b4a;
+      font-size: 14px;
+    }
+
+    .feedback {
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 18px;
+      background: #f7efe3;
+      display: none;
+    }
+
+    .diagram {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .string {
+      text-align: center;
+      background: white;
+      border-radius: 14px;
+      padding: 10px;
+      border: 1px solid #e4c89f;
+    }
+
+    .string-name {
+      font-weight: bold;
+      color: #6b5b4a;
+      margin-bottom: 8px;
+    }
+
+    .fret {
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .muted {
+      color: #c0392b;
+    }
+
+    .hint {
+      display: none;
+      margin-top: 14px;
+      padding: 14px;
+      background: #fff3cd;
+      border-radius: 16px;
+      color: #5f4b2f;
+    }
+
+    @media (max-width: 650px) {
+      .answers {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 26px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="game">
+    <div class="header">
+      <h1>🎸 Reconnais l’accord de guitare</h1>
+      <div class="subtitle">
+        Écoute l’accord, puis choisis la bonne réponse.
+      </div>
+
+      <div class="stats">
+        <div class="stat">Score : <span id="score">0</span></div>
+        <div class="stat">Manche : <span id="round">1</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Défi audio</h2>
+
+      <div class="guitar-zone">🎸</div>
+
+      <button class="primary" onclick="playCurrentChord()">▶ Écouter l’accord</button>
+      <button class="secondary" onclick="toggleHint()">Indice</button>
+      <button class="secondary" onclick="resetGame()">Recommencer</button>
+
+      <div id="hint" class="hint"></div>
+    </div>
+
+    <div class="card">
+      <h2>Quelle est la bonne réponse ?</h2>
+
+      <div id="answers" class="answers"></div>
+
+      <div id="feedback" class="feedback">
+        <div id="feedbackText"></div>
+        <div id="diagram" class="diagram"></div>
+        <br />
+        <button class="primary" onclick="nextRound()">Manche suivante</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chords = [
+      {
+        id: "C",
+        label: "C",
+        name: "Do majeur",
+        notes: ["C4", "E4", "G4"],
+        diagram: ["x", "3", "2", "0", "1", "0"],
+        hint: "Accord clair et lumineux. Très utilisé en pop, folk et variété."
+      },
+      {
+        id: "G",
+        label: "G",
+        name: "Sol majeur",
+        notes: ["G3", "B3", "D4", "G4"],
+        diagram: ["3", "2", "0", "0", "0", "3"],
+        hint: "Accord ouvert très ample. Souvent utilisé avec C et D."
+      },
+      {
+        id: "D",
+        label: "D",
+        name: "Ré majeur",
+        notes: ["D4", "F#4", "A4"],
+        diagram: ["x", "x", "0", "2", "3", "2"],
+        hint: "Accord brillant joué principalement sur les cordes aiguës."
+      },
+      {
+        id: "Em",
+        label: "Em",
+        name: "Mi mineur",
+        notes: ["E3", "G3", "B3", "E4"],
+        diagram: ["0", "2", "2", "0", "0", "0"],
+        hint: "Accord mineur facile, avec une couleur plus sombre."
+      },
+      {
+        id: "Am",
+        label: "Am",
+        name: "La mineur",
+        notes: ["A3", "C4", "E4", "A4"],
+        diagram: ["x", "0", "2", "2", "1", "0"],
+        hint: "Accord mineur doux, très courant dans les chansons acoustiques."
+      },
+      {
+        id: "E",
+        label: "E",
+        name: "Mi majeur",
+        notes: ["E3", "B3", "E4", "G#4"],
+        diagram: ["0", "2", "2", "1", "0", "0"],
+        hint: "Accord majeur puissant, toutes les cordes peuvent sonner."
+      }
+    ];
+
+    let currentChord = null;
+    let score = 0;
+    let round = 1;
+    let answered = false;
+
+    function noteToFrequency(note) {
+      const match = note.match(/^([A-G]#?)(\\d)$/);
+      const pitchClass = {
+        C: 0, "C#": 1,
+        D: 2, "D#": 3,
+        E: 4,
+        F: 5, "F#": 6,
+        G: 7, "G#": 8,
+        A: 9, "A#": 10,
+        B: 11
+      };
+
+      const semitone = pitchClass[match[1]];
+      const octave = Number(match[2]);
+      const midi = 12 * (octave + 1) + semitone;
+
+      return 440 * Math.pow(2, (midi - 69) / 12);
+    }
+
+    function playChord(notes) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContext) {
+        alert("Votre navigateur ne prend pas en charge l'audio interactif.");
+        return;
+      }
+
+      const audioContext = new AudioContext();
+      const now = audioContext.currentTime;
+
+      notes.forEach((note, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const filter = audioContext.createBiquadFilter();
+
+        oscillator.type = "triangle";
+        oscillator.frequency.value = noteToFrequency(note);
+
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(1800, now);
+
+        gain.gain.setValueAtTime(0.0001, now + index * 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.15, now + 0.08 + index * 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.4 + index * 0.04);
+
+        oscillator.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioContext.destination);
+
+        oscillator.start(now + index * 0.04);
+        oscillator.stop(now + 1.55 + index * 0.04);
+      });
+    }
+
+    function playCurrentChord() {
+      playChord(currentChord.notes);
+    }
+
+    function shuffle(array) {
+      return array.sort(() => Math.random() - 0.5);
+    }
+
+    function newQuestion() {
+      answered = false;
+
+      document.getElementById("feedback").style.display = "none";
+      document.getElementById("hint").style.display = "none";
+
+      currentChord = chords[Math.floor(Math.random() * chords.length)];
+
+      const wrongAnswers = chords
+        .filter(chord => chord.id !== currentChord.id)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+
+      const options = shuffle([currentChord, ...wrongAnswers]);
+
+      const answersContainer = document.getElementById("answers");
+      answersContainer.innerHTML = "";
+
+      options.forEach(option => {
+        const button = document.createElement("button");
+        button.className = "answer";
+        button.innerHTML = `
+          <span class="label">${option.label}</span>
+          <span class="name">${option.name}</span>
+        `;
+        button.onclick = () => chooseAnswer(option, button);
+        answersContainer.appendChild(button);
+      });
+
+      document.getElementById("hint").innerText = currentChord.hint;
+      updateStats();
+    }
+
+    function chooseAnswer(option, selectedButton) {
+      if (answered) return;
+
+      answered = true;
+
+      const isCorrect = option.id === currentChord.id;
+
+      if (isCorrect) {
+        score++;
+        selectedButton.classList.add("correct");
+        document.getElementById("feedbackText").innerHTML =
+          "✅ Bravo ! Tu as reconnu l’accord <strong>" + currentChord.label + "</strong>.";
+        playCurrentChord();
+      } else {
+        selectedButton.classList.add("wrong");
+        document.getElementById("feedbackText").innerHTML =
+          "❌ Presque ! C’était <strong>" + currentChord.label + "</strong> — " + currentChord.name + ".";
+      }
+
+      highlightCorrectAnswer();
+      showDiagram();
+      document.getElementById("feedback").style.display = "block";
+      updateStats();
+    }
+
+    function highlightCorrectAnswer() {
+      const buttons = document.querySelectorAll(".answer");
+
+      buttons.forEach(button => {
+        if (button.innerText.includes(currentChord.label)) {
+          button.classList.add("correct");
+        }
+      });
+    }
+
+    function showDiagram() {
+      const strings = ["E", "A", "D", "G", "B", "e"];
+      const diagram = document.getElementById("diagram");
+
+      diagram.innerHTML = "";
+
+      currentChord.diagram.forEach((fret, index) => {
+        const div = document.createElement("div");
+        div.className = "string";
+
+        div.innerHTML = `
+          <div class="string-name">${strings[index]}</div>
+          <div class="fret ${fret === "x" ? "muted" : ""}">${fret}</div>
+        `;
+
+        diagram.appendChild(div);
+      });
+    }
+
+    function toggleHint() {
+      const hint = document.getElementById("hint");
+      hint.style.display = hint.style.display === "block" ? "none" : "block";
+    }
+
+    function nextRound() {
+      round++;
+      newQuestion();
+    }
+
+    function resetGame() {
+      score = 0;
+      round = 1;
+      newQuestion();
+    }
+
+    function updateStats() {
+      document.getElementById("score").innerText = score;
+      document.getElementById("round").innerText = round;
+    }
+
+    newQuestion();
+  </script>
+</body>
+</html>
